@@ -1,0 +1,22 @@
+[
+  {
+    "name": "MyPlanetProps",
+    "properties": [
+      {
+        "intrinsicType": "number",
+        "name": "radius",
+        "optional": false
+      },
+      {
+        "intrinsicType": "number",
+        "name": "radius2",
+        "optional": true
+      },
+      {
+        "intrinsicType": null,
+        "name": "complex",
+        "optional": true
+      }
+    ]
+  }
+]

@@ -1,0 +1,16 @@
+[package]
+name = "bad_button"
+version = "0.1.0"
+authors = ["Maximilian Goisser <goisser94@gmail.com>"]
+edition = "2018"
+
+
+[dependencies]
+reacty_yew = { path = "../../../reacty_yew" }
+
+serde = { version = "1.0", features = ["derive"] }
+wasm-bindgen = { version = "0.2.68", features = ["serde-serialize"] }
+yew = "0.17.3"
+
+console_error_panic_hook = { version = "0.1.6" }
+wasm-logger = { version = "0.2" }
