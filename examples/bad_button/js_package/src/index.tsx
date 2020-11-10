@@ -3,6 +3,7 @@ import * as React from "react";
 interface BadButtonProps {
   color?: string,
   text: string,
+  foo: any,
 }
 
 const BadButton = (props: BadButtonProps): JSX.Element => {

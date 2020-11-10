@@ -56,14 +56,36 @@ pub fn react_component_mod(item: TokenStream) -> TokenStream {
 
     let mod_name = input.mod_ident;
 
-    let component_name = analyzer_output.components[0].name.clone();
-    let props_name = analyzer_output.components[0].props_name.clone();
-    let props_type = analyzer_output.types[0].clone();
+    let mut props_structs = quote! {};
+    for props_type in analyzer_output.types() {
+        let props_struct = component_props_struct(&props_type);
 
-    let props_struct = component_props_struct(&props_type);
-    let (render_fn_name, render_fn) =
-        component_render_function(&input.global_name, &component_name, &props_name);
-    let struct_and_impl = component_struct_and_impl(&component_name, &props_name, &render_fn_name);
+        props_structs = quote! {
+            #props_structs
+            #props_struct
+        };
+    }
+
+    let mut component_and_render_fns = quote! {};
+    for component in analyzer_output.components {
+        let props = analyzer_output
+            .types
+            .iter()
+            .find(|n| n.name == component.props_name)
+            .unwrap();
+
+        let (render_fn_name, render_fn) =
+            component_render_function(&input.global_name, &component.name, &props);
+        let struct_and_impl = component_struct_and_impl(&component.name, &props, &render_fn_name);
+
+        component_and_render_fns = quote! {
+            #component_and_render_fns
+
+            #struct_and_impl
+
+            #render_fn
+        };
+    }
 
     let expanded = quote! {
         mod #mod_name {
@@ -73,11 +95,9 @@ pub fn react_component_mod(item: TokenStream) -> TokenStream {
             use yew::virtual_dom::VNode;
             use serde::{Serialize, Deserialize};
 
-            #props_struct
+            #props_structs
 
-            #struct_and_impl
-
-            #render_fn
+            #component_and_render_fns
         }
     };
     TokenStream::from(expanded)
@@ -114,7 +134,7 @@ fn component_props_struct(props_type: &Type) -> proc_macro2::TokenStream {
     }
 
     quote! {
-        #[derive(Clone, Properties, Serialize, Deserialize)]
+        #[derive(Clone, Properties)]
         pub struct #props_name {
             #struct_fields
         }
@@ -124,36 +144,84 @@ fn component_props_struct(props_type: &Type) -> proc_macro2::TokenStream {
 fn component_render_function(
     js_lib_name: &str,
     component_name: &str,
-    props_name: &str,
+    props: &Type,
 ) -> (String, proc_macro2::TokenStream) {
     let render_fn_name = format!("render_{}", component_name);
     let render_fn_js_name = format!("render_{}_js", component_name);
 
     let component_name = syn::Ident::new(&component_name, proc_macro2::Span::call_site());
-    let props_name = syn::Ident::new(&props_name, proc_macro2::Span::call_site());
 
     let render_fn_name_ident = syn::Ident::new(&render_fn_name, proc_macro2::Span::call_site());
     let render_fn_js_name_ident =
         syn::Ident::new(&render_fn_js_name, proc_macro2::Span::call_site());
 
+    let props_names: String = props
+        .properties
+        .iter()
+        .map(|n| n.name.to_owned())
+        .collect::<Vec<_>>()
+        .join(", ");
     let inline_js_script = format!(
-        "export function {render_fn_js_name}(node, props) {{ let element = React.createElement({js_lib_name}.{component_name}, props); return ReactDOM.render(element, node); }}",
-        js_lib_name=js_lib_name,
-        component_name=component_name,
-        render_fn_js_name=render_fn_js_name
+        r#"
+            export function {render_fn_js_name}(node, {props_names}) {{
+                let element = React.createElement(
+                    {js_lib_name}.{component_name},
+                    {{ {props_names} }}
+                );
+                return ReactDOM.render(element, node);
+            }}
+        "#,
+        js_lib_name = js_lib_name,
+        component_name = component_name,
+        render_fn_js_name = render_fn_js_name,
+        props_names = props_names,
     );
 
+    let mut original_type_props = quote! {};
+    for property in &props.properties {
+        let prop_name = property.name_ident();
+        let prop_type = property.rust_type_for_intrinsic_type().unwrap();
+
+        let maybe_type = match property.optional {
+            false => {
+                quote! { #prop_type }
+            }
+            true => {
+                quote! { Option<#prop_type> }
+            }
+        };
+
+        let original_type_prop = quote! { #prop_name: &#maybe_type, };
+        original_type_props = quote! { #original_type_props #original_type_prop };
+    }
+    let mut type_conversions = quote! {};
+    for property in &props.properties {
+        let prop_name = property.name_ident();
+        let type_conversion = property.conversion_to_js_type(prop_name);
+        type_conversions = quote! {
+            #type_conversions
+            #type_conversion,
+        };
+    }
+
+    let mut js_type_props = quote! {};
+    for property in &props.properties {
+        let prop_name = property.name_ident();
+        let js_type_prop = quote! { #prop_name: JsValue, };
+        js_type_props = quote! { #js_type_props #js_type_prop };
+    }
+
     let render_fn = quote! {
-        fn #render_fn_name_ident(node: &Node, props: &#props_name) {
+        fn #render_fn_name_ident(node: &Node, #original_type_props) {
             #render_fn_js_name_ident(
                 node,
-                JsValue::from_serde(props).unwrap(),
+                #type_conversions
             );
         }
 
         #[wasm_bindgen(inline_js = #inline_js_script)]
         extern "C" {
-            fn #render_fn_js_name_ident(node: &Node, props: JsValue);
+            fn #render_fn_js_name_ident(node: &Node, #js_type_props);
         }
     };
 
@@ -162,12 +230,21 @@ fn component_render_function(
 
 fn component_struct_and_impl(
     component_name: &str,
-    props_name: &str,
+    props: &Type,
     render_fn_name: &str,
 ) -> proc_macro2::TokenStream {
     let component_name = syn::Ident::new(&component_name, proc_macro2::Span::call_site());
-    let props_name = syn::Ident::new(&props_name, proc_macro2::Span::call_site());
+    let props_name = syn::Ident::new(&props.name, proc_macro2::Span::call_site());
     let render_fn_name = syn::Ident::new(&render_fn_name, proc_macro2::Span::call_site());
+
+    let mut original_type_props = quote! {};
+    for property in &props.properties {
+        let prop_name = property.name_ident();
+        // let prop_type = property.rust_type_for_intrinsic_type().unwrap();
+
+        let original_type_prop = quote! { &self.props.#prop_name, };
+        original_type_props = quote! { #original_type_props #original_type_prop };
+    }
 
     quote! {
         pub struct #component_name {
@@ -203,7 +280,7 @@ fn component_struct_and_impl(
             }
 
             fn view(&self) -> Html {
-                #render_fn_name(&self.node, &self.props);
+                #render_fn_name(&self.node, #original_type_props);
 
                 VNode::VRef(self.node.clone())
             }

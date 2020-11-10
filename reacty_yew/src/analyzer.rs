@@ -34,6 +34,14 @@ pub struct Component {
     pub props_name: String,
 }
 
+impl AnalyzerOutput {
+    pub fn types(&self) -> Vec<Type> {
+        let mut types = self.types.clone();
+        types.dedup_by_key(|n| n.name.clone());
+        types
+    }
+}
+
 impl TypeProperty {
     pub fn name_ident(&self) -> syn::Ident {
         syn::Ident::new(&self.name, proc_macro2::Span::call_site())
@@ -44,8 +52,26 @@ impl TypeProperty {
             .as_ref()
             .map(|intrinsic_type| match intrinsic_type.as_ref() {
                 "string" => quote! { String },
+                "number" => quote! { f64 },
+                "boolean" => quote! { bool },
+                "any" => quote! { JsValue },
                 _ => unimplemented!(),
             })
+    }
+
+    pub fn conversion_to_js_type(&self, prop_name: syn::Ident) -> proc_macro2::TokenStream {
+        self.intrinsic_type
+            .as_ref()
+            .map(|intrinsic_type| match intrinsic_type.as_ref() {
+                "string" | "number" | "boolean" => {
+                    quote! { JsValue::from_serde(#prop_name).unwrap() }
+                }
+                "any" => {
+                    quote! { #prop_name.to_owned() }
+                }
+                _ => unimplemented!(),
+            })
+            .unwrap()
     }
 }
 

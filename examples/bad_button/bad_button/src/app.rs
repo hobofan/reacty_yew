@@ -26,7 +26,7 @@ impl Component for App {
         html! {
             <div>
                 <button>{"This button!"}</button>
-                <BadButton text="Actual props"/>
+                <BadButton text="Actual props" foo={wasm_bindgen::JsValue::from_f64(16f64)}/>
             </div>
         }
     }
