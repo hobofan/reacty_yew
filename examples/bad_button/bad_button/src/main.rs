@@ -2,8 +2,6 @@
 use reacty_yew::react_component_mod;
 
 mod app;
-// #[react_components]
-// mod bad_button {}
 react_component_mod!(
     bad_button;
     types = "../js_package/dist/index.d.ts",
