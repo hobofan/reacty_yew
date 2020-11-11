@@ -25,6 +25,7 @@ interface SimpleType {
     name: string,
     optional: boolean,
     intrinsicType?: string,
+    complexType?: string,
   }>
 }
 
@@ -167,18 +168,35 @@ function generateDocumentation(
   }
 
   function typeToSimpleType(type: ts.Type): SimpleType {
+    let typeName;
+    if (type.aliasSymbol) {
+      typeName = type.aliasSymbol.escapedName;
+    }
+    if (!typeName) {
+      typeName = type.symbol.escapedName as string
+    }
+
     const simpleType: SimpleType = {
-      name: type.symbol.escapedName as string,
+      name: typeName,
       properties: [],
     };
 
     type.symbol.members.forEach((symbol, key) => {
-      const {intrinsicName} = checker.getTypeOfSymbolAtLocation(symbol, symbol.valueDeclaration!) as any;
+      const checkedType = checker.getTypeOfSymbolAtLocation(symbol, symbol.valueDeclaration!) as any;
+      const {intrinsicName} = checkedType;
       const optional = checker.isOptionalParameter((symbol as any).declarations[0]);
+      let complexType;
+      if (checkedType.aliasSymbol) {
+        complexType = checkedType.aliasSymbol.escapedName;
+
+        const simpleType = typeToSimpleType(checkedType);
+        types.push(simpleType);
+      }
 
       const property = {
         name: key as string,
         intrinsicType: intrinsicName,
+        complexType,
         optional,
       };
       simpleType.properties.push(property);

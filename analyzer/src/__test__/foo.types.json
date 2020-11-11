@@ -1,18 +1,32 @@
 [
   {
+    "name": "OtherType",
+    "properties": [
+      {
+        "complexType": null,
+        "intrinsicType": "string",
+        "name": "foo",
+        "optional": false
+      }
+    ]
+  },
+  {
     "name": "MyPlanetProps",
     "properties": [
       {
+        "complexType": null,
         "intrinsicType": "number",
         "name": "radius",
         "optional": false
       },
       {
+        "complexType": null,
         "intrinsicType": "number",
         "name": "radius2",
         "optional": true
       },
       {
+        "complexType": "OtherType",
         "intrinsicType": null,
         "name": "complex",
         "optional": true
