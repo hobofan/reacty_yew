@@ -53,8 +53,9 @@ function generateDocumentation(fileNames, options) {
                         types.push(simpleType);
                         propsName_1 = simpleType.name;
                     });
+                    var componentExportedName = exportedNameForSymbol(subnode, node);
                     var component = {
-                        name: subnode.name.escapedText,
+                        name: componentExportedName,
                         propsName: propsName_1
                     };
                     components.push(component);
@@ -113,21 +114,51 @@ function generateDocumentation(fileNames, options) {
         return false;
     }
     function typeToSimpleType(type) {
+        var typeName;
+        if (type.aliasSymbol) {
+            typeName = type.aliasSymbol.escapedName;
+        }
+        if (!typeName) {
+            typeName = type.symbol.escapedName;
+        }
         var simpleType = {
-            name: type.symbol.escapedName,
+            name: typeName,
             properties: []
         };
         type.symbol.members.forEach(function (symbol, key) {
-            var intrinsicName = checker.getTypeOfSymbolAtLocation(symbol, symbol.valueDeclaration).intrinsicName;
+            var checkedType = checker.getTypeOfSymbolAtLocation(symbol, symbol.valueDeclaration);
+            var intrinsicName = checkedType.intrinsicName;
             var optional = checker.isOptionalParameter(symbol.declarations[0]);
+            var complexType;
+            if (checkedType.aliasSymbol) {
+                complexType = checkedType.aliasSymbol.escapedName;
+                var simpleType_1 = typeToSimpleType(checkedType);
+                types.push(simpleType_1);
+            }
             var property = {
                 name: key,
                 intrinsicType: intrinsicName,
+                complexType: complexType,
                 optional: optional
             };
             simpleType.properties.push(property);
         });
         return simpleType;
+    }
+    function exportedNameForSymbol(symbol, fileNode) {
+        var localName = symbol.name.escapedText;
+        var exportedName;
+        fileNode.parent.symbol.exports.forEach(function (value, key) {
+            // Follow exported symbol to original symbol
+            try {
+                var aliasedSymbol = checker.getAliasedSymbol(value);
+                if (aliasedSymbol.escapedName === localName) {
+                    exportedName = value.escapedName;
+                }
+            }
+            catch (_a) { }
+        });
+        return exportedName || localName;
     }
     /** Serialize a symbol into a json object */
     function serializeSymbol(symbol) {

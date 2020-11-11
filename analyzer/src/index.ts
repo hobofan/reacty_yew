@@ -5,7 +5,7 @@ const util = require('util')
 const log = util.debuglog('fortest')
 
 // log((node.parent as any).fileName)
-// if ((node.parent as any).fileName === '/Users/hobofan/stuff/rust-typescript-bridge/analyzer/src/__test__/foo-indirect_function_inferred.tsx') {
+// if ((node.parent as any).fileName === '/Users/hobofan/hobofan/reacty_yew/analyzer/src/__test__/foo-indirect_function_inferred.tsx') {
   // log(node.kind);
 // }
 
@@ -92,8 +92,9 @@ function generateDocumentation(
             propsName = simpleType.name;
           });
 
+          const componentExportedName = exportedNameForSymbol(subnode as any, node);
           const component = {
-            name: (subnode.name as any).escapedText,
+            name: componentExportedName,
             propsName,
           }
           components.push(component);
@@ -203,6 +204,21 @@ function generateDocumentation(
     });
 
     return simpleType;
+  }
+
+  function exportedNameForSymbol(symbol: ts.Symbol, fileNode: ts.Node): string {
+    const localName = (symbol.name as any).escapedText
+    let exportedName;
+    (fileNode.parent as any).symbol.exports.forEach((value, key) => {
+      // Follow exported symbol to original symbol
+      try {
+        const aliasedSymbol = checker.getAliasedSymbol(value);
+        if(aliasedSymbol.escapedName === localName) {
+          exportedName = value.escapedName;
+        }
+      } catch { }
+    });
+    return exportedName || localName;
   }
 
   /** Serialize a symbol into a json object */
