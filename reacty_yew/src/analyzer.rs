@@ -1,3 +1,4 @@
+use proc_macro_error::{diagnostic, emit_error, Level};
 use quote::quote;
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -55,7 +56,17 @@ impl TypeProperty {
                 "number" => quote! { f64 },
                 "boolean" => quote! { bool },
                 "any" => quote! { JsValue },
-                _ => unimplemented!(),
+                other => {
+                    emit_error!(diagnostic!(
+                        proc_macro::Span::call_site(),
+                        Level::Error,
+                        format!(
+                            "reacty_yew: Unable to convert intrinsic type \"{}\" to Rust type",
+                            other
+                        ),
+                    ));
+                    quote! {}
+                }
             })
     }
 

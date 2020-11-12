@@ -3,6 +3,7 @@ extern crate proc_macro;
 mod analyzer;
 
 use proc_macro::TokenStream;
+use proc_macro_error::proc_macro_error;
 use quote::quote;
 use syn::parse::{Parse, ParseStream};
 use syn::Result;
@@ -48,6 +49,7 @@ impl Parse for MacroInput {
     }
 }
 
+#[proc_macro_error]
 #[proc_macro]
 pub fn react_component_mod(item: TokenStream) -> TokenStream {
     let input = syn::parse_macro_input!(item as MacroInput);
