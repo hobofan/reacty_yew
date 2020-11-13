@@ -2,6 +2,8 @@
 
 This is a proof of concept for automatically generating [Yew](https://yew.rs/) components from React components that have Typescript type definitions. Many parts are missing and this **likely shouldn't be used in production!**
 
+[Announcement blog post with a bit more information](https://www.hobofan.com/blog/2020-11-10-reacty_yew/)
+
 ## Showcase
 
 For the full example see [./examples/bad_button](./examples/bad_button).
