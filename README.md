@@ -1,4 +1,4 @@
-## reacty_yew - Generate Yew components from React component Typescript type definitions
+## reacty_yew - Generate Yew components from React component via Typescript type definitions
 
 This is a proof of concept for automatically generating [Yew](https://yew.rs/) components from React components that have Typescript type definitions. Many parts are missing and this **likely shouldn't be used in production!**
 
