@@ -1,0 +1,25 @@
+name: Examples
+
+on: [push]
+
+jobs:
+  test:
+    name: Build examples
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: wasm32-unknown-unknown
+      - uses: actions/setup-node@v2-beta
+        with:
+          node-version: '14'
+
+      - run: npm install
+        working-directory: examples/bad_button/js_package
+      - run: npm run build
+        working-directory: examples/bad_button/js_package
+      - run: cargo build --target wasm32-unknown-unknown
+        working-directory: examples/bad_button/bad_button
+
