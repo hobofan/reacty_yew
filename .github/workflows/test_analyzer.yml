@@ -1,0 +1,19 @@
+name: Test TS analyzer
+
+on: [push]
+
+jobs:
+  test:
+    name: Test TS analyzer
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2-beta
+        with:
+          node-version: '14'
+
+      - run: npm install
+        working-directory: analyzer
+      - run: npm run test
+        working-directory: analyzer
+
