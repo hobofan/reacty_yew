@@ -87,16 +87,20 @@ impl TypeProperty {
 }
 
 pub fn init_js_scripts() {
-    let analyzer_script_path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("./target/index.js");
+    let analyzer_script_path =
+        PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap()).join("./target/index.js");
     let typescript_script_path =
-        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("./target/typescript.js");
+        PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap()).join("./target/typescript.js");
 
-    fs::write(&analyzer_script_path, ANALYZER_SCRIPT_FILE).unwrap();
-    fs::write(&typescript_script_path, TYPESCRIPT_SCRIPT_FILE).unwrap();
+    fs::write(&analyzer_script_path, ANALYZER_SCRIPT_FILE)
+        .expect("Unable to write analyzer script");
+    fs::write(&typescript_script_path, TYPESCRIPT_SCRIPT_FILE)
+        .expect("Unable to write typscript dependency script");
 }
 
 pub fn run_analyzer(path: &str) -> AnalyzerOutput {
-    let analyzer_script_path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("./target/index.js");
+    let analyzer_script_path =
+        PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap()).join("./target/index.js");
     let input_path = PathBuf::from(path).canonicalize().unwrap();
 
     let output = Command::new("node")
